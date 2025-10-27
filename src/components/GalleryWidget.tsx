@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
-import { supabase, type GalleryImage } from '../lib/supabase';
+import { supabase, hasSupabase, type GalleryImage } from '../lib/supabase';
 
 export default function GalleryWidget() {
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -15,6 +15,12 @@ export default function GalleryWidget() {
   }, []);
 
   const loadImages = async () => {
+    if (!hasSupabase || !supabase) {
+      // No backend configured in production; leave empty (placeholders will render)
+      setImages([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('gallery_images')
       .select('*')
@@ -32,6 +38,8 @@ export default function GalleryWidget() {
 
   const handleAddImage = async () => {
     if (!newImageUrl.trim()) return;
+
+    if (!hasSupabase || !supabase) return; // skip when not configured
 
     const maxOrder = images.length > 0 ? Math.max(...images.map(img => img.order_index)) : -1;
 
@@ -111,8 +119,8 @@ export default function GalleryWidget() {
 
         <div className="flex items-center gap-4">
           <button
-            onClick={() => setIsAddingImage(true)}
-            className="btn-neu"
+            onClick={() => hasSupabase && setIsAddingImage(true)}
+            className={`btn-neu ${!hasSupabase ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             + ADD IMAGE
           </button>
@@ -142,6 +150,13 @@ export default function GalleryWidget() {
               <img src={image.url} alt="Gallery" />
             </div>
           ))}
+          {images.length === 0 && (
+            <>
+              <div className="gallery-tile" />
+              <div className="gallery-tile" />
+              <div className="gallery-tile" />
+            </>
+          )}
         </div>
       </div>
 
